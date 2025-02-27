@@ -29,6 +29,18 @@ struct Grep : Proc {
     }
 }
 
+struct Cat : Proc {
+    typealias Input = VoidPipe
+    typealias Output = StringPipe
+    let file : URL
+    func path() throws -> URL {
+        try .findExecutable(named: "cat")
+    }
+    var arguments: [String] {
+        [file.path()]
+    }
+}
+
 @Test func snooper() async throws {
     
     let proc = Echo(msg: snooper) |> Grep(pattern: "bug")
@@ -69,5 +81,24 @@ must find our own bugs. Our computers are losers!
     let result2 = try await proc.run(VoidPipe()).read()
     
     #expect(result2 == result1)
+    
+}
+
+@Test func failure() async throws {
+    
+    let grep = Bundle.module.url(forResource: "MyGrep", withExtension: "sh")!
+    
+    do {
+        _ = try await Cat(file: grep).run(VoidPipe())
+    }
+    catch {
+        #expect(Bool(false), "expected no error")
+    }
+    
+    do {
+        _ = try await Cat(file: grep.deletingLastPathComponent()).run(VoidPipe())
+        #expect(Bool(false), "expected error")
+    }
+    catch { }
     
 }
